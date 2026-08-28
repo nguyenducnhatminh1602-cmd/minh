@@ -1,0 +1,12 @@
+{
+  "name": "doan-thuong-badminton",
+  "version": "1.0.0",
+  "description": "Website Bảng Xếp Hạng Cầu Lông Đoàn Thượng Badminton chuẩn BWF",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["badminton", "bwf", "ranking", "doan-thuong"],
+  "author": "Đoàn Thượng Badminton",
+  "license": "ISC"
+}

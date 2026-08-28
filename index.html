@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đoàn Thượng Badminton - Bảng Xếp Hạng BWF Chính Thức</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Firebase Cloud SDK để đồng bộ trực tuyến toàn trường -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <!-- TOP BAR & STATUS -->
+  <header class="bwf-header">
+    <div class="top-bar">
+      <div class="live-badge" id="cloudStatusBadge">
+        <span class="live-dot"></span>
+        <span>HỆ THỐNG XẾP HẠNG ĐOÀN THƯỢNG BADMINTON (BWF STANDARD)</span>
+      </div>
+      <div id="liveTime" style="font-size: 0.75rem; color: #9BA3B5;"></div>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <nav class="navbar">
+      <a href="index.html" class="brand-logo">
+        <div class="logo-shuttlecock">🏸</div>
+        <div class="brand-info">
+          <h1>Đoàn Thượng Badminton</h1>
+          <span>BẢNG XẾP HẠNG CHÍNH THỨC</span>
+        </div>
+      </a>
+
+      <ul class="nav-links">
+        <li class="nav-item"><a href="index.html" class="active">🏆 Bảng Xếp Hạng</a></li>
+        <li class="nav-item"><a href="#newsSection">📰 Bản Tin Cầu Lông</a></li>
+        <li class="nav-item"><a href="#" onclick="openRulesModal()">📋 Thể Thức Tính Điểm</a></li>
+        <li class="nav-item" id="adminNavLink" style="display: none;">
+          <a href="admin.html" style="color: var(--bwf-gold); font-weight: 700;">⚙️ Quản Trị Admin</a>
+        </li>
+      </ul>
+
+      <div class="nav-actions" id="userActionArea">
+        <button class="btn btn-outline btn-sm" onclick="openRegisterModal()">📝 Đăng Ký</button>
+        <button class="btn btn-primary btn-sm" onclick="openLoginModal()">🔑 Đăng Nhập</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- HERO BANNER -->
+  <section class="bwf-banner">
+    <div class="banner-container">
+      <div class="banner-title-area">
+        <h2>🏸 BẢNG XẾP HẠNG VẬN ĐỘNG VIÊN</h2>
+        <p>Hệ thống xếp hạng và tích lũy điểm chính thức CLB Cầu Lông Đoàn Thượng</p>
+      </div>
+      <div class="banner-stats">
+        <div class="stat-box">
+          <div class="stat-value" id="totalAthletesCount">0</div>
+          <div class="stat-label">Vận Động Viên</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="topScore">0</div>
+          <div class="stat-label">Điểm Cao Nhất</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="totalMatches">0</div>
+          <div class="stat-label">Lượt Tính Điểm</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PODIUM TOP 3 SHOWCASE -->
+  <section class="podium-container" id="podiumSection">
+    <div class="podium-grid" id="podiumCards">
+      <!-- Sẽ được tạo động bằng JavaScript (Top 2, Top 1, Top 3) -->
+    </div>
+  </section>
+
+  <!-- CONTROLS & CATEGORY TABS -->
+  <section class="controls-container">
+    <!-- Category Tabs -->
+    <div class="category-tabs" id="categoryTabs">
+      <button class="category-tab active" data-cat="ALL">🌟 Tổng Sắp Toàn Đoàn</button>
+      <button class="category-tab" data-cat="Đơn Nam">🏸 Đơn Nam (MS)</button>
+      <button class="category-tab" data-cat="Đơn Nữ">🏸 Đơn Nữ (WS)</button>
+      <button class="category-tab" data-cat="Đôi Nam">🏸 Đôi Nam (MD)</button>
+      <button class="category-tab" data-cat="Đôi Nữ">🏸 Đôi Nữ (WD)</button>
+      <button class="category-tab" data-cat="Đôi Nam Nữ">🏸 Đôi Nam Nữ (XD)</button>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="filter-bar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Tìm kiếm theo Tên VĐV, Lớp hoặc Tên đăng nhập...">
+      </div>
+
+      <div class="secondary-filters">
+        <select class="select-filter" id="classFilter">
+          <option value="ALL">🏫 Tất cả các Lớp</option>
+          <option value="10">Khối 10</option>
+          <option value="11">Khối 11</option>
+          <option value="12">Khối 12</option>
+        </select>
+
+        <select class="select-filter" id="genderFilter">
+          <option value="ALL">⚥ Tất cả Giới tính</option>
+          <option value="Nam">Nam</option>
+          <option value="Nữ">Nữ</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN RANKINGS TABLE -->
+  <main class="ranking-section">
+    <div class="table-wrapper">
+      <table class="bwf-table" id="rankingTable">
+        <thead>
+          <tr>
+            <th style="width: 90px; text-align: center;">HẠNG</th>
+            <th style="width: 70px; text-align: center;">BIẾN ĐỘNG</th>
+            <th>VẬN ĐỘNG VIÊN</th>
+            <th>LỚP / ĐƠN VỊ</th>
+            <th>GIỚI TÍNH</th>
+            <th>NỘI DUNG CHÍNH</th>
+            <th style="text-align: right;">ĐIỂM BWF</th>
+            <th style="width: 110px; text-align: center;">CHI TIẾT</th>
+          </tr>
+        </thead>
+        <tbody id="rankingTableBody">
+          <!-- Hàng BXH được render bởi app.js -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- BẢN TIN CẦU LÔNG & SỰ KIỆN (NEWS SECTION) -->
+  <section class="news-section" id="newsSection">
+    <div class="section-header-row">
+      <div>
+        <h3>📰 BẢN TIN CẦU LÔNG ĐOÀN THƯỢNG</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+          Tin tức giải đấu, hình ảnh sự kiện, thông báo CLB và bí quyết kỹ thuật cầu lông mới nhất
+        </p>
+      </div>
+    </div>
+
+    <div class="news-grid" id="newsCardsGrid">
+      <!-- Render bởi JavaScript -->
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bwf-footer">
+    <div class="footer-content">
+      <div>
+        <h4 style="color: #fff; margin-bottom: 4px;">🏸 ĐOÀN THƯỢNG BADMINTON</h4>
+        <p>Hệ thống xếp hạng chuẩn BWF - Cập nhật liên tục theo thời gian thực.</p>
+      </div>
+      <div class="footer-credits">
+        Quản trị viên: <strong>nguyenducnhatminh1602</strong> & <strong>nguyenduchieu</strong>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       MODALS (CỬA SỔ BẬT)
+  ========================================================= -->
+
+  <!-- MODAL: ĐĂNG KÝ THÀNH VIÊN -->
+  <div class="modal-backdrop" id="registerModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📝 Đăng Ký Thành Viên Mới</h3>
+        <button class="btn-close-modal" onclick="closeModal('registerModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="notice-box warning">
+          ⚠️ <strong>Lưu ý:</strong> Sau khi đăng ký, hồ sơ của bạn sẽ được gửi tới Ban Quản Trị (Admin) để phê duyệt trước khi được thêm vào Bảng Xếp Hạng.
+        </div>
+
+        <form id="registerForm" onsubmit="handleRegisterSubmit(event)">
+          <div class="form-group">
+            <label>Họ và Tên Vận Động Viên (*)</label>
+            <input type="text" id="regName" class="form-control" placeholder="Ví dụ: Nguyễn Văn An" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Lớp / Khối (*)</label>
+              <input type="text" id="regClass" class="form-control" placeholder="Ví dụ: 12A1, 11A2, 10A3..." required>
+            </div>
+            <div class="form-group">
+              <label>Giới Tính (*)</label>
+              <select id="regGender" class="form-control" required>
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nội Dung Thi Đấu Tự Chọn (Có thể chọn nhiều nội dung) (*)</label>
+            <div class="category-checkbox-grid">
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="regCategories" value="Đơn Nam">
+                <span>🏸 Đơn Nam (MS)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="regCategories" value="Đơn Nữ">
+                <span>🏸 Đơn Nữ (WS)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="regCategories" value="Đôi Nam">
+                <span>🏸 Đôi Nam (MD)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="regCategories" value="Đôi Nữ">
+                <span>🏸 Đôi Nữ (WD)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="regCategories" value="Đôi Nam Nữ">
+                <span>🏸 Đôi Nam Nữ (XD)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tên Đăng Nhập (*)</label>
+            <input type="text" id="regUsername" class="form-control" placeholder="Viết liền không dấu, ví dụ: nhatminh12a1" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Mật Khẩu (*)</label>
+              <input type="password" id="regPassword" class="form-control" placeholder="Nhập mật khẩu" required>
+            </div>
+            <div class="form-group">
+              <label>Nhập Lại Mật Khẩu (*)</label>
+              <input type="password" id="regConfirmPassword" class="form-control" placeholder="Nhập lại mật khẩu" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            🚀 Gửi Đơn Đăng Ký Cho Admin Duyệt
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐĂNG NHẬP -->
+  <div class="modal-backdrop" id="loginModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>🔑 Đăng Nhập Hệ Thống</h3>
+        <button class="btn-close-modal" onclick="closeModal('loginModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+          <div class="form-group">
+            <label>Tên Đăng Nhập</label>
+            <input type="text" id="loginUsername" class="form-control" placeholder="Nhập tên đăng nhập hoặc tài khoản Admin" required>
+          </div>
+
+          <div class="form-group">
+            <label>Mật Khẩu</label>
+            <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu" required>
+          </div>
+
+          <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 15px;">
+            👑 Quản trị viên sử dụng 1 trong 2 tài khoản Admin được cấp.
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Đăng Nhập
+          </button>
+
+          <div style="text-align: center; margin-top: 15px; font-size: 0.85rem; color: var(--text-muted);">
+            Chưa có tài khoản thành viên? 
+            <a href="javascript:void(0)" onclick="closeModal('loginModal'); openRegisterModal();" style="color: var(--bwf-gold); font-weight: 700; text-decoration: none;">Đăng ký ngay</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CHI TIẾT VĐV & LỊCH SỬ ĐIỂM -->
+  <div class="modal-backdrop" id="playerModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="playerModalName">Hồ Sơ Vận Động Viên</h3>
+        <button class="btn-close-modal" onclick="closeModal('playerModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; background: var(--bg-surface); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, var(--bwf-red), #9A0007); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; font-weight: 800;" id="playerAvatar">
+            🏸
+          </div>
+          <div>
+            <h4 id="playerDetailFullName" style="font-size: 1.15rem; color: #fff;">-</h4>
+            <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 10px; margin-top: 3px;">
+              <span id="playerDetailClass">Lớp: -</span> • 
+              <span id="playerDetailGender">Giới tính: -</span> • 
+              <span id="playerDetailCategory">Nội dung: -</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; background: var(--bg-surface); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div style="width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, var(--bwf-red), #9A0007); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; font-weight: 800;" id="playerAvatar">
+            🏸
+          </div>
+          <div style="flex: 1;">
+            <h4 id="playerDetailFullName" style="font-size: 1.15rem; color: #fff;">-</h4>
+            <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 10px; margin-top: 3px; flex-wrap: wrap;">
+              <span id="playerDetailClass">Lớp: -</span> • 
+              <span id="playerDetailGender">Giới tính: -</span>
+            </div>
+            <div id="playerDetailCategoriesList" class="category-badges-group" style="margin-top: 6px;">
+              <!-- Badges danh mục -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Các nút tương tác xã hội (Kết bạn, Nhắn tin, Mời đấu) -->
+        <div id="playerSocialActionsArea" style="display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;">
+          <!-- Render bởi JS -->
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+          <div class="stat-box">
+            <div class="stat-value" id="playerDetailRank" style="color: var(--bwf-gold);">#-</div>
+            <div class="stat-label">Thứ Hạng Hiện Tại</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="playerDetailPoints" style="color: #60A5FA;">0</div>
+            <div class="stat-label">Tổng Điểm Tích Lũy</div>
+          </div>
+        </div>
+
+        <h4 style="font-size: 0.95rem; margin-bottom: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
+          📜 Lịch Sử Tích Lũy Điểm BWF
+        </h4>
+        <div class="history-list" id="playerPointsHistoryList">
+          <!-- Render bởi JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL: MEMBER HUB (TRUNG TÂM THÀNH VIÊN: NỘI DUNG, BẠN BÈ, CHAT, MỜI ĐẤU)
+  ========================================================= -->
+  <div class="modal-backdrop" id="memberHubModal">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3 id="memberHubHeading">🏸 Trung Tâm Thành Viên Đoàn Thượng</h3>
+        <button class="btn-close-modal" onclick="closeModal('memberHubModal')">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top: 15px;">
+        <div class="hub-nav-tabs">
+          <button class="hub-tab-btn active" onclick="switchHubTab('hubCategoriesTab')">
+            🏸 Nội Dung Thi Đấu
+          </button>
+          <button class="hub-tab-btn" onclick="switchHubTab('hubFriendsTab')">
+            👥 Bạn Bè & Kết Bạn 
+            <span id="pendingFriendBadge" class="badge-count" style="display: none; background: var(--danger); color: #fff;">0</span>
+          </button>
+          <button class="hub-tab-btn" onclick="switchHubTab('hubInvitesTab')">
+            ⚔️ Lời Mời Ghép Trận 
+            <span id="pendingInviteBadge" class="badge-count" style="display: none; background: var(--warning); color: #000;">0</span>
+          </button>
+          <button class="hub-tab-btn" onclick="switchHubTab('hubChatTab')">
+            💬 Trò Chuyện (Chat) 
+            <span id="unreadMsgBadge" class="badge-count" style="display: none; background: var(--bwf-gold); color: #000;">0</span>
+          </button>
+        </div>
+
+        <!-- TAB 1: NỘI DUNG THI ĐẤU -->
+        <div id="hubCategoriesTab" class="hub-tab-content" style="margin-top: 15px;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 6px;">Đăng Ký & Thay Đổi Nội Dung Thi Đấu</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+            Bạn có thể đăng ký tham gia nhiều nội dung (Ví dụ: vừa thi đấu Đơn Nữ vừa tham gia Đôi Nam Nữ hoặc Đôi Nữ).
+          </p>
+
+          <form id="memberCategoriesForm" onsubmit="handleSaveCategories(event)">
+            <div class="category-checkbox-grid">
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="hubCategories" value="Đơn Nam">
+                <span>🏸 Đơn Nam (MS)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="hubCategories" value="Đơn Nữ">
+                <span>🏸 Đơn Nữ (WS)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="hubCategories" value="Đôi Nam">
+                <span>🏸 Đôi Nam (MD)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="hubCategories" value="Đôi Nữ">
+                <span>🏸 Đôi Nữ (WD)</span>
+              </label>
+              <label class="category-checkbox-card">
+                <input type="checkbox" name="hubCategories" value="Đôi Nam Nữ">
+                <span>🏸 Đôi Nam Nữ (XD)</span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top: 12px;">
+              💾 Lưu Thay Đổi Nội Dung Thi Đấu
+            </button>
+          </form>
+        </div>
+
+        <!-- TAB 2: BẠN BÈ & KẾT BẠN -->
+        <div id="hubFriendsTab" class="hub-tab-content" style="display: none; margin-top: 15px;">
+          <!-- Lời mời kết bạn đang chờ -->
+          <div id="pendingRequestsContainer" style="margin-bottom: 20px;">
+            <h5 style="color: var(--bwf-gold); font-size: 0.95rem; margin-bottom: 10px;">🔔 Lời Mời Kết Bạn Đang Chờ Duyệt</h5>
+            <div id="pendingRequestsList" class="friends-list" style="max-height: 180px;"></div>
+          </div>
+
+          <!-- Danh sách bạn bè -->
+          <h5 style="color: #60A5FA; font-size: 0.95rem; margin-bottom: 10px;">👥 Danh Sách Bạn Bè</h5>
+          <div id="myFriendsList" class="friends-list"></div>
+
+          <!-- Gợi ý kết bạn từ CLB -->
+          <h5 style="color: var(--text-muted); font-size: 0.95rem; margin: 20px 0 10px;">🏸 Tìm Bạn Mới Trong CLB</h5>
+          <div id="suggestedFriendsList" class="friends-list" style="max-height: 200px;"></div>
+        </div>
+
+        <!-- TAB 3: LỜI MỜI GHÉP TRẬN -->
+        <div id="hubInvitesTab" class="hub-tab-content" style="display: none; margin-top: 15px;">
+          <div style="margin-bottom: 20px;">
+            <h5 style="color: var(--bwf-gold); font-size: 0.95rem; margin-bottom: 10px;">📥 Lời Mời Ghép Trận Nhận Được</h5>
+            <div id="receivedInvitesList"></div>
+          </div>
+
+          <div>
+            <h5 style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 10px;">📤 Lời Mời Bạn Đã Gửi</h5>
+            <div id="sentInvitesList"></div>
+          </div>
+        </div>
+
+        <!-- TAB 4: CHAT & TRÒ CHUYỆN -->
+        <div id="hubChatTab" class="hub-tab-content" style="display: none; margin-top: 15px;">
+          <div class="chat-container">
+            <div class="chat-sidebar" id="chatFriendsSidebar">
+              <!-- Danh sách bạn bè để chat -->
+            </div>
+            <div class="chat-main">
+              <div class="chat-header">
+                <span id="activeChatUserName">Chọn bạn bè để trò chuyện</span>
+                <span id="activeChatUserClass" style="font-size: 0.75rem; color: var(--text-dim);"></span>
+              </div>
+              <div class="chat-messages-area" id="chatMessagesArea">
+                <div style="text-align: center; color: var(--text-dim); margin-top: 50px;">
+                  Chọn một người bạn ở danh sách bên trái để bắt đầu nhắn tin!
+                </div>
+              </div>
+              <form class="chat-input-bar" id="chatSendForm" onsubmit="handleSendChat(event)">
+                <input type="text" id="chatInputText" placeholder="Nhập tin nhắn..." autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm">Gửi</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL: MỜI GHÉP TRẬN / THÁCH ĐẤU
+  ========================================================= -->
+  <div class="modal-backdrop" id="matchInviteModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>🏸 Mời Ghép Trận / Thách Đấu</h3>
+        <button class="btn-close-modal" onclick="closeModal('matchInviteModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="matchInviteForm" onsubmit="handleSendMatchInviteSubmit(event)">
+          <input type="hidden" id="inviteTargetUserId">
+
+          <div style="background: var(--bg-surface); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 15px; border: 1px solid var(--border-color);">
+            Đang mời giao lưu với: <strong id="inviteTargetUserName" style="color: var(--bwf-gold);">-</strong>
+          </div>
+
+          <div class="form-group">
+            <label>Nội Dung Thi Đấu (*)</label>
+            <select id="inviteCategory" class="form-control" required>
+              <option value="Đơn Nam">🏸 Đơn Nam</option>
+              <option value="Đơn Nữ">🏸 Đơn Nữ</option>
+              <option value="Đôi Nam">🏸 Đôi Nam</option>
+              <option value="Đôi Nữ">🏸 Đôi Nữ</option>
+              <option value="Đôi Nam Nữ">🏸 Đôi Nam Nữ</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ngày Thi Đấu (*)</label>
+              <input type="date" id="inviteDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Giờ Dự Kiến (*)</label>
+              <input type="time" id="inviteTime" class="form-control" value="17:00" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Địa Điểm / Sân Đấu</label>
+            <input type="text" id="inviteVenue" class="form-control" value="Sân Nhà Đa Năng THPT Đoàn Thượng">
+          </div>
+
+          <div class="form-group">
+            <label>Lời Nhắn</label>
+            <input type="text" id="inviteNote" class="form-control" placeholder="Ví dụ: Giao lưu 3 set tính điểm nhé bạn...">
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+              ⚔️ Gửi Lời Mời Thi Đấu
+            </button>
+            <button type="button" class="btn btn-outline" onclick="closeModal('matchInviteModal')">Hủy</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: THỂ THỨC TÍNH ĐIỂM -->
+  <div class="modal-backdrop" id="rulesModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📋 Quy Định Tính Điểm BWF Đoàn Thượng</h3>
+        <button class="btn-close-modal" onclick="closeModal('rulesModal')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main);">
+        <p style="margin-bottom: 12px;">Hệ thống tính điểm được áp dụng theo tiêu chuẩn giải đấu CLB Cầu Lông Đoàn Thượng:</p>
+        
+        <div style="background: var(--bg-surface); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 14px;">
+          <h5 style="color: var(--bwf-gold); margin-bottom: 8px;">🏆 Giải Đấu Chính Thức (Trường / CLB Mở Rộng)</h5>
+          <ul style="padding-left: 20px; list-style-type: square; color: var(--text-muted);">
+            <li><strong style="color:#fff;">Vô địch (HCV):</strong> +1,000 Điểm</li>
+            <li><strong style="color:#fff;">Á quân (HCB):</strong> +800 Điểm</li>
+            <li><strong style="color:#fff;">Hạng ba (HCĐ):</strong> +650 Điểm</li>
+            <li><strong style="color:#fff;">Vào Tứ kết:</strong> +450 Điểm</li>
+            <li><strong style="color:#fff;">Thắng vòng bảng:</strong> +200 Điểm / trận thắng</li>
+          </ul>
+        </div>
+
+        <div style="background: var(--bg-surface); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 14px;">
+          <h5 style="color: #60A5FA; margin-bottom: 8px;">⚔️ Trận Đấu Giao Lưu & Thách Đấu CLB</h5>
+          <ul style="padding-left: 20px; list-style-type: square; color: var(--text-muted);">
+            <li><strong style="color:#fff;">Thắng trận thách đấu:</strong> +100 Điểm</li>
+            <li><strong style="color:#fff;">Tham gia tích cực / Tập luyện:</strong> +50 Điểm</li>
+          </ul>
+        </div>
+
+        <div class="notice-box">
+          ℹ️ Mọi điểm số do 2 Quản trị viên (Admin) <strong>Nguyễn Đức Nhật Minh</strong> và <strong>Nguyễn Đức Hiếu</strong> trực tiếp kiểm tra và cộng/trừ trên hệ thống.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐỌC CHI TIẾT BẢN TIN -->
+  <div class="modal-backdrop" id="newsDetailModal">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 id="newsModalTitle" style="font-size: 1.15rem; line-height: 1.4;">Tiêu Đề Bản Tin</h3>
+        <button class="btn-close-modal" onclick="closeModal('newsDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top: 15px;">
+        <div style="font-size: 0.8rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <span id="newsModalMeta">📅 Ngày đăng: - • Tác giả: -</span>
+          <span id="newsModalBadge" class="category-pill" style="background: var(--bwf-red); color: #fff; border: none;">Tin Tức</span>
+        </div>
+
+        <div style="width: 100%; max-height: 320px; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 18px; border: 1px solid var(--border-color); background: #000;">
+          <img id="newsModalImage" src="" alt="Hình ảnh bản tin" style="width: 100%; height: 100%; max-height: 320px; object-fit: contain; display: block; margin: 0 auto;">
+        </div>
+
+        <div id="newsModalSummary" style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-bottom: 14px; line-height: 1.6; border-left: 3px solid var(--bwf-gold); padding-left: 12px;">
+          Tóm tắt bài viết...
+        </div>
+
+        <div id="newsModalContent" style="color: var(--text-main); font-size: 0.92rem; line-height: 1.7; white-space: pre-line;">
+          Nội dung đầy đủ...
+        </div>
+
+        <div style="text-align: right; margin-top: 24px;">
+          <button class="btn btn-outline btn-sm" onclick="closeModal('newsDetailModal')">Đóng Bản Tin</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGIC -->
+  <script src="app.js"></script>
+  <script>
+    // Trạng thái bộ lọc hiện tại
+    let currentCategory = 'ALL';
+    let currentClass = 'ALL';
+    let currentGender = 'ALL';
+    let currentSearch = '';
+
+    // Khởi tạo trang
+    document.addEventListener('DOMContentLoaded', () => {
+      updateLiveClock();
+      setInterval(updateLiveClock, 1000);
+      setupAuthUI();
+      renderAll();
+
+      // Lắng nghe sự kiện đồng bộ từ các tab khác
+      if (syncChannel) {
+        syncChannel.onmessage = (msg) => {
+          if (msg.data && msg.data.type === 'DATA_UPDATED') {
+            renderAll();
+          }
+        };
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === STORAGE_KEY) {
+          renderAll();
+        }
+      });
+
+      // Gắn sự kiện danh mục
+      document.querySelectorAll('.category-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentCategory = tab.getAttribute('data-cat');
+          renderRankings();
+          renderPodium();
+        });
+      });
+
+      // Gắn sự kiện tìm kiếm & lọc
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        currentSearch = e.target.value;
+        renderRankings();
+      });
+
+      document.getElementById('classFilter').addEventListener('change', (e) => {
+        currentClass = e.target.value;
+        renderRankings();
+        renderPodium();
+      });
+
+      document.getElementById('genderFilter').addEventListener('change', (e) => {
+        currentGender = e.target.value;
+        renderRankings();
+        renderPodium();
+      });
+    });
+
+    // Cập nhật đồng hồ thời gian thực
+    function updateLiveClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + now.toLocaleTimeString('vi-VN');
+      const elem = document.getElementById('liveTime');
+      if (elem) elem.textContent = '🕒 ' + timeStr;
+    }
+
+    // Cập nhật giao diện Trạng thái Đăng nhập
+    function setupAuthUI() {
+      const session = getSession();
+      const actionArea = document.getElementById('userActionArea');
+      const adminLink = document.getElementById('adminNavLink');
+
+      if (!actionArea) return;
+
+      if (session) {
+        if (session.isAdmin) {
+          adminLink.style.display = 'block';
+          actionArea.innerHTML = `
+            <span style="font-size: 0.85rem; color: var(--bwf-gold); font-weight: 700; display: flex; align-items: center; gap: 6px;">
+              👑 ${session.name}
+            </span>
+            <a href="admin.html" class="btn btn-gold btn-sm">⚙️ Quản Trị</a>
+            <button class="btn btn-outline btn-sm" onclick="handleLogout()">Đăng Xuất</button>
+          `;
+        } else {
+          adminLink.style.display = 'none';
+          
+          // Đếm thông báo tin nhắn chưa đọc & lời mời
+          const unreadMsgs = getUnreadMessagesCount(session.id);
+          const friendReqs = getPendingFriendRequests(session.id).length;
+          const matchInvites = getMemberMatchInvites(session.id).received.filter(i => i.status === 'pending').length;
+          const totalAlerts = unreadMsgs + friendReqs + matchInvites;
+
+          actionArea.innerHTML = `
+            <button class="btn btn-primary btn-sm" onclick="openMemberHubModal('hubCategoriesTab')" style="position: relative;">
+              🏸 Thành Viên Hub
+              ${totalAlerts > 0 ? `<span style="position: absolute; top: -6px; right: -6px; background: var(--danger); color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 50%; font-weight: 800;">${totalAlerts}</span>` : ''}
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="openPlayerModal('${session.id}')">Hồ Sơ Của Tôi</button>
+            <button class="btn btn-outline btn-sm" onclick="handleLogout()">Đăng Xuất</button>
+          `;
+        }
+      } else {
+        adminLink.style.display = 'none';
+        actionArea.innerHTML = `
+          <button class="btn btn-outline btn-sm" onclick="openRegisterModal()">📝 Đăng Ký</button>
+          <button class="btn btn-primary btn-sm" onclick="openLoginModal()">🔑 Đăng Nhập</button>
+        `;
+      }
+    }
+
+    function handleLogout() {
+      clearSession();
+      setupAuthUI();
+      renderAll();
+      showToast('Đã đăng xuất tài khoản!', 'info');
+    }
+
+    // Render toàn bộ dữ liệu
+    function renderAll() {
+      renderStats();
+      renderPodium();
+      renderRankings();
+      renderNews();
+      updateHubBadges();
+    }
+
+    // Render danh sách bản tin cầu lông
+    function renderNews() {
+      const newsList = getNewsList();
+      const grid = document.getElementById('newsCardsGrid');
+      if (!grid) return;
+
+      if (!newsList || newsList.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 30px;">Chưa có bản tin nào được đăng.</div>`;
+        return;
+      }
+
+      let html = '';
+      newsList.forEach(item => {
+        html += `
+          <div class="news-card" onclick="openNewsModal('${item.id}')">
+            <div class="news-img-wrapper">
+              <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" onerror="this.src='https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80'">
+              <span class="news-category-badge">${escapeHtml(item.category || 'Tin Tức')}</span>
+            </div>
+            <div class="news-content">
+              <h4 class="news-title">${escapeHtml(item.title)}</h4>
+              <div class="news-meta">
+                <span>📅 ${item.date || 'Gần đây'}</span>
+                <span>👑 ${escapeHtml(item.author || 'Admin')}</span>
+              </div>
+              <p class="news-excerpt">${escapeHtml(item.summary)}</p>
+              <div class="news-footer">
+                <span>Đọc bài viết & ảnh chi tiết</span>
+                <span>➔</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      grid.innerHTML = html;
+    }
+
+    function openNewsModal(newsId) {
+      const newsList = getNewsList();
+      const item = newsList.find(n => n.id === newsId);
+      if (!item) return;
+
+      document.getElementById('newsModalTitle').textContent = item.title;
+      document.getElementById('newsModalMeta').textContent = `📅 Ngày đăng: ${item.date || 'Hôm nay'} • Người đăng: ${item.author || 'Ban Quản Trị'}`;
+      document.getElementById('newsModalBadge').textContent = item.category || 'Tin Tức';
+      document.getElementById('newsModalImage').src = item.image;
+      document.getElementById('newsModalSummary').textContent = item.summary;
+      document.getElementById('newsModalContent').textContent = item.content;
+
+      openModal('newsDetailModal');
+    }
+
+    // Render các chỉ số thống kê trên banner
+    function renderStats() {
+      const db = getDB();
+      const activeMembers = db.members.filter(m => m.status === 'active');
+      document.getElementById('totalAthletesCount').textContent = activeMembers.length;
+
+      const highestScore = activeMembers.reduce((max, m) => Math.max(max, m.points || 0), 0);
+      document.getElementById('topScore').textContent = highestScore.toLocaleString();
+
+      let totalHistories = 0;
+      activeMembers.forEach(m => {
+        if (m.history) totalHistories += m.history.length;
+      });
+      document.getElementById('totalMatches').textContent = totalHistories;
+    }
+
+    // Render bục vinh quang Top 3
+    function renderPodium() {
+      const list = getRankings(currentCategory, currentClass, currentGender);
+      const podiumContainer = document.getElementById('podiumCards');
+      if (!podiumContainer) return;
+
+      if (list.length === 0) {
+        podiumContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 20px;">Chưa có VĐV nào trong danh mục này.</div>`;
+        return;
+      }
+
+      const top1 = list[0];
+      const top2 = list[1] || null;
+      const top3 = list[2] || null;
+
+      let html = '';
+
+      // Card Rank 2 (Bên trái)
+      if (top2) {
+        const top2Cats = top2.categories ? top2.categories.join(' • ') : top2.category;
+        html += `
+          <div class="podium-card rank-2" onclick="openPlayerModal('${top2.id}')" style="cursor: pointer;">
+            <div class="podium-rank-badge">2</div>
+            <div class="podium-name">${escapeHtml(top2.name)}</div>
+            <div class="podium-class">Lớp: ${escapeHtml(top2.class)} • ${top2.gender}</div>
+            <div class="podium-points">${top2.points.toLocaleString()} ĐIỂM</div>
+            <div class="podium-category-tag">${top2Cats}</div>
+          </div>
+        `;
+      } else {
+        html += `<div class="podium-card rank-2" style="opacity: 0.3;"><div class="podium-rank-badge">2</div><div class="podium-name">Đang cập nhật</div></div>`;
+      }
+
+      // Card Rank 1 (Ở giữa - Nổi bật nhất)
+      if (top1) {
+        const top1Cats = top1.categories ? top1.categories.join(' • ') : top1.category;
+        html += `
+          <div class="podium-card rank-1" onclick="openPlayerModal('${top1.id}')" style="cursor: pointer;">
+            <div class="podium-crown">👑</div>
+            <div class="podium-rank-badge">1</div>
+            <div class="podium-name" style="font-size: 1.3rem; color: #FFF;">${escapeHtml(top1.name)}</div>
+            <div class="podium-class">Lớp: ${escapeHtml(top1.class)} • ${top1.gender}</div>
+            <div class="podium-points" style="font-size: 1.25rem; border-color: rgba(255,215,0,0.5);">${top1.points.toLocaleString()} ĐIỂM</div>
+            <div class="podium-category-tag" style="color: var(--bwf-gold);">${top1Cats}</div>
+          </div>
+        `;
+      }
+
+      // Card Rank 3 (Bên phải)
+      if (top3) {
+        const top3Cats = top3.categories ? top3.categories.join(' • ') : top3.category;
+        html += `
+          <div class="podium-card rank-3" onclick="openPlayerModal('${top3.id}')" style="cursor: pointer;">
+            <div class="podium-rank-badge">3</div>
+            <div class="podium-name">${escapeHtml(top3.name)}</div>
+            <div class="podium-class">Lớp: ${escapeHtml(top3.class)} • ${top3.gender}</div>
+            <div class="podium-points">${top3.points.toLocaleString()} ĐIỂM</div>
+            <div class="podium-category-tag">${top3Cats}</div>
+          </div>
+        `;
+      } else {
+        html += `<div class="podium-card rank-3" style="opacity: 0.3;"><div class="podium-rank-badge">3</div><div class="podium-name">Đang cập nhật</div></div>`;
+      }
+
+      podiumContainer.innerHTML = html;
+    }
+
+    // Render bảng xếp hạng chính với Đa nội dung
+    function renderRankings() {
+      const list = getRankings(currentCategory, currentClass, currentGender, currentSearch);
+      const tbody = document.getElementById('rankingTableBody');
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px 20px; color: var(--text-dim);">
+              🏸 Không tìm thấy vận động viên nào phù hợp với bộ lọc hiện tại.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      list.forEach(m => {
+        let rankBadgeClass = '';
+        if (m.rank === 1) rankBadgeClass = 'rank-top1';
+        else if (m.rank === 2) rankBadgeClass = 'rank-top2';
+        else if (m.rank === 3) rankBadgeClass = 'rank-top3';
+
+        // Biến động hạng
+        let changeHtml = '<span class="rank-change change-same">▬</span>';
+        if (m.rankChange > 0) {
+          changeHtml = `<span class="rank-change change-up">▲ ${m.rankChange}</span>`;
+        } else if (m.rankChange < 0) {
+          changeHtml = `<span class="rank-change change-down">▼ ${Math.abs(m.rankChange)}</span>`;
+        }
+
+        const genderClass = m.gender === 'Nam' ? 'gender-nam' : 'gender-nu';
+
+        // Hiển thị tất cả nội dung mà VĐV đăng ký
+        const cats = m.categories && Array.isArray(m.categories) ? m.categories : [m.category || 'Đơn Nam'];
+        let catsHtml = '<div class="category-badges-group">';
+        cats.forEach(c => {
+          catsHtml += `<span class="category-pill">${escapeHtml(c)}</span>`;
+        });
+        catsHtml += '</div>';
+
+        html += `
+          <tr>
+            <td style="text-align: center;">
+              <span class="rank-number ${rankBadgeClass}">${m.rank}</span>
+            </td>
+            <td style="text-align: center;">
+              ${changeHtml}
+            </td>
+            <td>
+              <div class="player-name-cell">
+                ${escapeHtml(m.name)}
+                <span class="player-id">@${escapeHtml(m.username)}</span>
+              </div>
+            </td>
+            <td>
+              <span class="class-badge">${escapeHtml(m.class)}</span>
+            </td>
+            <td>
+              <span class="gender-badge ${genderClass}">${m.gender === 'Nam' ? '♂ Nam' : '♀ Nữ'}</span>
+            </td>
+            <td>
+              ${catsHtml}
+            </td>
+            <td style="text-align: right;">
+              <span class="points-cell">${m.points.toLocaleString()}</span>
+            </td>
+            <td style="text-align: center;">
+              <button class="btn btn-outline btn-sm" onclick="openPlayerModal('${m.id}')" title="Xem hồ sơ, kết bạn, nhắn tin & mời đấu">
+                🔍 Xem
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    // Mở modal thông tin VĐV (Kèm các nút Kết bạn, Nhắn tin, Mời ghép trận)
+    function openPlayerModal(memberId) {
+      const db = getDB();
+      const member = db.members.find(m => m.id === memberId);
+      if (!member) return;
+
+      const session = getSession();
+      const rankings = getRankings();
+      const rankIdx = rankings.findIndex(m => m.id === memberId);
+      const currentRank = rankIdx >= 0 ? rankIdx + 1 : '-';
+
+      document.getElementById('playerModalName').textContent = `Hồ Sơ VĐV: ${member.name}`;
+      document.getElementById('playerDetailFullName').textContent = member.name;
+      document.getElementById('playerDetailClass').textContent = `Lớp: ${member.class}`;
+      document.getElementById('playerDetailGender').textContent = `Giới tính: ${member.gender}`;
+      document.getElementById('playerDetailRank').textContent = `#${currentRank}`;
+      document.getElementById('playerDetailPoints').textContent = member.points.toLocaleString();
+
+      // Hiển thị danh sách các nội dung đăng ký
+      const cats = member.categories && Array.isArray(member.categories) ? member.categories : [member.category || 'Đơn Nam'];
+      let catsHtml = '';
+      cats.forEach(c => {
+        catsHtml += `<span class="category-pill" style="font-size: 0.8rem; background: rgba(211,47,47,0.15); border-color: rgba(211,47,47,0.4);">${c}</span>`;
+      });
+      document.getElementById('playerDetailCategoriesList').innerHTML = catsHtml;
+
+      // Nút tương tác xã hội (Kết bạn, Nhắn tin, Mời đấu)
+      const actionsArea = document.getElementById('playerSocialActionsArea');
+      if (session && !session.isAdmin && session.id !== memberId) {
+        const friendStatus = getFriendshipStatus(session.id, memberId);
+        let friendBtnHtml = '';
+
+        if (friendStatus === 'friends') {
+          friendBtnHtml = `<button class="btn btn-outline btn-sm" style="color: var(--success);"><span style="color: var(--success);">✓</span> Đã Là Bạn Bè</button>`;
+        } else if (friendStatus === 'pending_sent') {
+          friendBtnHtml = `<button class="btn btn-outline btn-sm" disabled style="opacity: 0.7;">⏳ Đã Gửi Lời Mời</button>`;
+        } else if (friendStatus === 'pending_received') {
+          friendBtnHtml = `<button class="btn btn-success btn-sm" onclick="handleAcceptFriendFromModal('${memberId}')">✓ Chấp Nhận Kết Bạn</button>`;
+        } else {
+          friendBtnHtml = `<button class="btn btn-outline btn-sm" onclick="handleSendFriendFromModal('${memberId}')">➕ Kết Bạn</button>`;
+        }
+
+        actionsArea.innerHTML = `
+          ${friendBtnHtml}
+          <button class="btn btn-primary btn-sm" onclick="openDirectChatFromModal('${memberId}')">💬 Nhắn Tin</button>
+          <button class="btn btn-gold btn-sm" onclick="openMatchInviteModal('${memberId}', '${escapeHtml(member.name)}')">⚔️ Mời Ghép Trận</button>
+        `;
+      } else if (session && session.id === memberId) {
+        actionsArea.innerHTML = `
+          <button class="btn btn-primary btn-sm" onclick="closeModal('playerModal'); openMemberHubModal('hubCategoriesTab');">
+            ⚙️ Quản Lý Nội Dung Thi Đấu & Bạn Bè
+          </button>
+        `;
+      } else {
+        actionsArea.innerHTML = '';
+      }
+
+      // Lịch sử điểm
+      const historyList = document.getElementById('playerPointsHistoryList');
+      if (member.history && member.history.length > 0) {
+        let hHtml = '';
+        member.history.forEach(h => {
+          const isPlus = h.points >= 0;
+          hHtml += `
+            <div class="history-item">
+              <div>
+                <div class="history-desc">${escapeHtml(h.reason)}</div>
+                <div class="history-date">📅 ${h.date} • Duyệt bởi: ${escapeHtml(h.by || 'Admin')}</div>
+              </div>
+              <div class="history-change-points ${isPlus ? 'points-plus' : 'points-minus'}">
+                ${isPlus ? '+' : ''}${h.points.toLocaleString()}
+              </div>
+            </div>
+          `;
+        });
+        historyList.innerHTML = hHtml;
+      } else {
+        historyList.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 15px;">Chưa có lịch sử biến động điểm.</div>`;
+      }
+
+      openModal('playerModal');
+    }
+
+    // Xử lý nộp form đăng ký (hỗ trợ nhiều nội dung)
+    function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('regName').value;
+      const userClass = document.getElementById('regClass').value;
+      const gender = document.getElementById('regGender').value;
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+      const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+      // Lấy tất cả checkbox nội dung được tích
+      const checkboxes = document.querySelectorAll('input[name="regCategories"]:checked');
+      const selectedCats = Array.from(checkboxes).map(cb => cb.value);
+
+      if (selectedCats.length === 0) {
+        showToast('Vui lòng chọn ít nhất 1 nội dung thi đấu!', 'warning');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showToast('Mật khẩu nhập lại không khớp!', 'danger');
+        return;
+      }
+
+      const result = registerNewMember({
+        name, class: userClass, gender, categories: selectedCats, username, password
+      });
+
+      if (result.success) {
+        showToast(result.message, 'success');
+        closeModal('registerModal');
+        document.getElementById('registerForm').reset();
+      } else {
+        showToast(result.message, 'danger');
+      }
+    }
+
+    // Xử lý nộp form đăng nhập
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const uname = document.getElementById('loginUsername').value;
+      const pass = document.getElementById('loginPassword').value;
+
+      const res = loginUser(uname, pass);
+      if (res.success) {
+        showToast(res.message, 'success');
+        closeModal('loginModal');
+        document.getElementById('loginForm').reset();
+        setupAuthUI();
+        renderAll();
+        if (res.user.isAdmin) {
+          setTimeout(() => {
+            window.location.href = 'admin.html';
+          }, 800);
+        }
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    // =========================================================
+    // MEMBER HUB: QUẢN LÝ NỘI DUNG, BẠN BÈ, CHAT, MỜI ĐẤU
+    // =========================================================
+    let activeChatOpponentId = null;
+
+    function openMemberHubModal(initialTab = 'hubCategoriesTab') {
+      const session = getSession();
+      if (!session || session.isAdmin) {
+        showToast('Vui lòng đăng nhập tài khoản thành viên để sử dụng!', 'warning');
+        openLoginModal();
+        return;
+      }
+
+      switchHubTab(initialTab);
+      openModal('memberHubModal');
+    }
+
+    function switchHubTab(tabId) {
+      document.querySelectorAll('.hub-tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.hub-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+      const target = document.getElementById(tabId);
+      if (target) target.style.display = 'block';
+
+      const btn = document.querySelector(`[onclick*="${tabId}"]`);
+      if (btn) btn.classList.add('active');
+
+      if (tabId === 'hubCategoriesTab') renderHubCategories();
+      else if (tabId === 'hubFriendsTab') renderHubFriends();
+      else if (tabId === 'hubInvitesTab') renderHubInvites();
+      else if (tabId === 'hubChatTab') renderHubChat(activeChatOpponentId);
+    }
+
+    function updateHubBadges() {
+      const session = getSession();
+      if (!session || session.isAdmin) return;
+
+      const unreadMsgs = getUnreadMessagesCount(session.id);
+      const friendReqs = getPendingFriendRequests(session.id).length;
+      const matchInvites = getMemberMatchInvites(session.id).received.filter(i => i.status === 'pending').length;
+
+      const fBadge = document.getElementById('pendingFriendBadge');
+      if (fBadge) {
+        fBadge.style.display = friendReqs > 0 ? 'inline-block' : 'none';
+        fBadge.textContent = friendReqs;
+      }
+
+      const iBadge = document.getElementById('pendingInviteBadge');
+      if (iBadge) {
+        iBadge.style.display = matchInvites > 0 ? 'inline-block' : 'none';
+        iBadge.textContent = matchInvites;
+      }
+
+      const mBadge = document.getElementById('unreadMsgBadge');
+      if (mBadge) {
+        mBadge.style.display = unreadMsgs > 0 ? 'inline-block' : 'none';
+        mBadge.textContent = unreadMsgs;
+      }
+    }
+
+    // 1. Quản lý nội dung thi đấu cá nhân
+    function renderHubCategories() {
+      const session = getSession();
+      if (!session) return;
+
+      const db = getDB();
+      const member = db.members.find(m => m.id === session.id);
+      if (!member) return;
+
+      const cats = member.categories && Array.isArray(member.categories) ? member.categories : [member.category || 'Đơn Nam'];
+
+      document.querySelectorAll('input[name="hubCategories"]').forEach(cb => {
+        cb.checked = cats.includes(cb.value);
+      });
+    }
+
+    function handleSaveCategories(e) {
+      e.preventDefault();
+      const session = getSession();
+      if (!session) return;
+
+      const checkboxes = document.querySelectorAll('input[name="hubCategories"]:checked');
+      const selected = Array.from(checkboxes).map(cb => cb.value);
+
+      if (selected.length === 0) {
+        showToast('Vui lòng chọn ít nhất 1 nội dung thi đấu!', 'warning');
+        return;
+      }
+
+      const res = updateMemberCategories(session.id, selected);
+      if (res.success) {
+        showToast(res.message, 'success');
+        renderAll();
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    // 2. Quản lý Bạn Bè
+    function renderHubFriends() {
+      const session = getSession();
+      if (!session) return;
+
+      const db = getDB();
+      const friends = getFriendsList(session.id);
+      const pendingReqs = getPendingFriendRequests(session.id);
+
+      // Render Lời mời đang chờ
+      const pendingContainer = document.getElementById('pendingRequestsContainer');
+      const pendingListElem = document.getElementById('pendingRequestsList');
+      if (pendingReqs.length > 0) {
+        pendingContainer.style.display = 'block';
+        let pHtml = '';
+        pendingReqs.forEach(req => {
+          pHtml += `
+            <div class="friend-card">
+              <div class="friend-info">
+                <div class="friend-avatar">🏸</div>
+                <div>
+                  <strong style="color: #fff;">${escapeHtml(req.sender.name)}</strong>
+                  <div style="font-size: 0.75rem; color: var(--text-dim);">Lớp: ${escapeHtml(req.sender.class)} • Gửi ngày ${req.createdAt}</div>
+                </div>
+              </div>
+              <div class="friend-actions">
+                <button class="btn btn-success btn-sm" onclick="handleAcceptFriendReq('${req.requestId}')">✓ Chấp nhận</button>
+                <button class="btn btn-danger btn-sm" onclick="handleDeclineFriendReq('${req.requestId}')">✗ Từ chối</button>
+              </div>
+            </div>
+          `;
+        });
+        pendingListElem.innerHTML = pHtml;
+      } else {
+        pendingContainer.style.display = 'none';
+      }
+
+      // Render Danh sách bạn bè hiện tại
+      const myFriendsElem = document.getElementById('myFriendsList');
+      if (friends.length > 0) {
+        let fHtml = '';
+        friends.forEach(fr => {
+          fHtml += `
+            <div class="friend-card">
+              <div class="friend-info">
+                <div class="friend-avatar">🏸</div>
+                <div>
+                  <strong style="color: #fff;">${escapeHtml(fr.name)}</strong>
+                  <div style="font-size: 0.75rem; color: var(--text-dim);">Lớp: ${escapeHtml(fr.class)} • ${fr.points} Điểm</div>
+                </div>
+              </div>
+              <div class="friend-actions">
+                <button class="btn btn-primary btn-sm" onclick="openDirectChatFromModal('${fr.id}')">💬 Nhắn tin</button>
+                <button class="btn btn-gold btn-sm" onclick="openMatchInviteModal('${fr.id}', '${escapeHtml(fr.name)}')">⚔️ Mời đấu</button>
+              </div>
+            </div>
+          `;
+        });
+        myFriendsElem.innerHTML = fHtml;
+      } else {
+        myFriendsElem.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 15px;">Bạn chưa có người bạn nào. Hãy kết bạn với các thành viên CLB bên dưới!</div>`;
+      }
+
+      // Render Thành viên gợi ý kết bạn
+      const suggestedElem = document.getElementById('suggestedFriendsList');
+      const otherMembers = db.members.filter(m => m.status === 'active' && m.id !== session.id);
+      let sHtml = '';
+      otherMembers.forEach(m => {
+        const st = getFriendshipStatus(session.id, m.id);
+        if (st !== 'friends') {
+          let btnText = '➕ Kết bạn';
+          let btnAction = `handleSendFriendReq('${m.id}')`;
+          let btnDisabled = false;
+
+          if (st === 'pending_sent') {
+            btnText = '⏳ Đã gửi lời mời';
+            btnDisabled = true;
+          }
+
+          sHtml += `
+            <div class="friend-card">
+              <div class="friend-info">
+                <div class="friend-avatar" style="background: var(--bg-card);">🏸</div>
+                <div>
+                  <strong style="color: #fff;">${escapeHtml(m.name)}</strong>
+                  <div style="font-size: 0.75rem; color: var(--text-dim);">Lớp: ${escapeHtml(m.class)} • ${m.points} Điểm</div>
+                </div>
+              </div>
+              <div class="friend-actions">
+                <button class="btn btn-outline btn-sm" onclick="${btnAction}" ${btnDisabled ? 'disabled style="opacity:0.6;"' : ''}>
+                  ${btnText}
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      });
+      suggestedElem.innerHTML = sHtml || `<div style="color: var(--text-dim); text-align: center; padding: 10px;">Đã kết bạn với tất cả thành viên!</div>`;
+    }
+
+    function handleSendFriendReq(toId) {
+      const session = getSession();
+      if (!session) return;
+      const res = sendFriendRequest(session.id, toId);
+      if (res.success) {
+        showToast(res.message, 'success');
+        renderHubFriends();
+      } else {
+        showToast(res.message, 'warning');
+      }
+    }
+
+    function handleAcceptFriendReq(reqId) {
+      const res = acceptFriendRequest(reqId);
+      if (res.success) {
+        showToast(res.message, 'success');
+        renderHubFriends();
+        updateHubBadges();
+      }
+    }
+
+    function handleDeclineFriendReq(reqId) {
+      const res = declineFriendRequest(reqId);
+      if (res.success) {
+        showToast(res.message, 'info');
+        renderHubFriends();
+        updateHubBadges();
+      }
+    }
+
+    function handleSendFriendFromModal(toId) {
+      handleSendFriendReq(toId);
+      closeModal('playerModal');
+    }
+
+    function handleAcceptFriendFromModal(toId) {
+      const session = getSession();
+      if (!session) return;
+      const reqs = getPendingFriendRequests(session.id);
+      const targetReq = reqs.find(r => r.sender.id === toId);
+      if (targetReq) {
+        handleAcceptFriendReq(targetReq.requestId);
+        closeModal('playerModal');
+      }
+    }
+
+    // 3. Quản lý Lời Mời Ghép Trận
+    function renderHubInvites() {
+      const session = getSession();
+      if (!session) return;
+
+      const invites = getMemberMatchInvites(session.id);
+      const recvElem = document.getElementById('receivedInvitesList');
+      const sentElem = document.getElementById('sentInvitesList');
+
+      // Lời mời nhận được
+      if (invites.received.length > 0) {
+        let rHtml = '';
+        invites.received.forEach(inv => {
+          let statusBadge = `<span class="category-pill" style="background: var(--warning); color: #000;">Chờ bạn phản hồi</span>`;
+          let actionBtns = `
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <button class="btn btn-success btn-sm" onclick="handleRespondMatch('${inv.id}', 'accepted')">✓ Chấp nhận thi đấu</button>
+              <button class="btn btn-danger btn-sm" onclick="handleRespondMatch('${inv.id}', 'declined')">✗ Từ chối</button>
+            </div>
+          `;
+          if (inv.status === 'accepted') {
+            statusBadge = `<span class="category-pill" style="background: var(--success); color: #fff;">Đã chấp nhận</span>`;
+            actionBtns = `<div style="font-size: 0.8rem; color: var(--success); margin-top: 8px;">✓ Hãy chuẩn bị ra sân đúng hẹn nhé!</div>`;
+          } else if (inv.status === 'declined') {
+            statusBadge = `<span class="category-pill" style="background: var(--danger); color: #fff;">Đã từ chối</span>`;
+            actionBtns = '';
+          }
+
+          rHtml += `
+            <div class="match-card">
+              <div class="match-card-header">
+                <div>
+                  <strong style="color: #fff; font-size: 1rem;">🏸 ${escapeHtml(inv.fromName)}</strong> mời bạn đấu <strong>${inv.category}</strong>
+                </div>
+                ${statusBadge}
+              </div>
+              <div class="match-card-body">
+                <div>📅 <strong>Thời gian:</strong> ${inv.time} ngày ${inv.date}</div>
+                <div>📍 <strong>Địa điểm:</strong> ${escapeHtml(inv.venue)}</div>
+                <div>💬 <strong>Lời nhắn:</strong> "${escapeHtml(inv.note)}"</div>
+                ${actionBtns}
+              </div>
+            </div>
+          `;
+        });
+        recvElem.innerHTML = rHtml;
+      } else {
+        recvElem.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 15px;">Chưa có lời mời ghép trận nào.</div>`;
+      }
+
+      // Lời mời đã gửi
+      if (invites.sent.length > 0) {
+        let sHtml = '';
+        invites.sent.forEach(inv => {
+          let statusText = 'Chờ đối thủ phản hồi';
+          if (inv.status === 'accepted') statusText = '✓ Đối thủ đã đồng ý';
+          else if (inv.status === 'declined') statusText = '✗ Đối thủ đã từ chối';
+
+          sHtml += `
+            <div class="match-card" style="border-left-color: #60A5FA;">
+              <div class="match-card-header">
+                <div>
+                  Bạn đã mời <strong>${escapeHtml(inv.toName)}</strong> đấu <strong>${inv.category}</strong>
+                </div>
+                <span class="category-pill">${statusText}</span>
+              </div>
+              <div class="match-card-body">
+                <div>📅 ${inv.time} ngày ${inv.date} tại ${escapeHtml(inv.venue)}</div>
+              </div>
+            </div>
+          `;
+        });
+        sentElem.innerHTML = sHtml;
+      } else {
+        sentElem.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 15px;">Bạn chưa gửi lời mời ghép trận nào.</div>`;
+      }
+    }
+
+    function openMatchInviteModal(targetUserId, targetUserName) {
+      const session = getSession();
+      if (!session || session.isAdmin) {
+        showToast('Vui lòng đăng nhập để mời ghép trận!', 'warning');
+        openLoginModal();
+        return;
+      }
+
+      document.getElementById('inviteTargetUserId').value = targetUserId;
+      document.getElementById('inviteTargetUserName').textContent = targetUserName;
+      
+      // Ngày mặc định là ngày mai
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('inviteDate').value = tomorrow.toISOString().split('T')[0];
+
+      closeModal('playerModal');
+      openModal('matchInviteModal');
+    }
+
+    function handleSendMatchInviteSubmit(e) {
+      e.preventDefault();
+      const session = getSession();
+      if (!session) return;
+
+      const targetId = document.getElementById('inviteTargetUserId').value;
+      const targetName = document.getElementById('inviteTargetUserName').textContent;
+      const category = document.getElementById('inviteCategory').value;
+      const date = document.getElementById('inviteDate').value;
+      const time = document.getElementById('inviteTime').value;
+      const venue = document.getElementById('inviteVenue').value;
+      const note = document.getElementById('inviteNote').value;
+
+      const res = sendMatchInvite({
+        fromId: session.id,
+        fromName: session.name,
+        toId: targetId,
+        toName: targetName,
+        category, date, time, venue, note
+      });
+
+      if (res.success) {
+        showToast(res.message, 'success');
+        closeModal('matchInviteModal');
+        openMemberHubModal('hubInvitesTab');
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    function handleRespondMatch(inviteId, status) {
+      const res = respondMatchInvite(inviteId, status);
+      if (res.success) {
+        showToast(res.message, 'success');
+        renderHubInvites();
+        updateHubBadges();
+      }
+    }
+
+    // 4. Trò chuyện & Chat Messenger
+    function openDirectChatFromModal(opponentId) {
+      closeModal('playerModal');
+      openMemberHubModal('hubChatTab');
+      activeChatOpponentId = opponentId;
+      renderHubChat(opponentId);
+    }
+
+    function renderHubChat(targetUserId = null) {
+      const session = getSession();
+      if (!session) return;
+
+      const db = getDB();
+      const friends = getFriendsList(session.id);
+      const sidebarElem = document.getElementById('chatFriendsSidebar');
+      const messagesArea = document.getElementById('chatMessagesArea');
+
+      // Thêm đối thủ hiện tại nếu chưa là bạn bè chính thức
+      let chatContacts = [...friends];
+      if (targetUserId && !chatContacts.some(c => c.id === targetUserId)) {
+        const opponent = db.members.find(m => m.id === targetUserId);
+        if (opponent) chatContacts.unshift(opponent);
+      }
+
+      if (chatContacts.length === 0) {
+        sidebarElem.innerHTML = `<div style="color: var(--text-dim); padding: 15px; font-size: 0.8rem; text-align: center;">Chưa có bạn bè để trò chuyện.</div>`;
+        messagesArea.innerHTML = `<div style="text-align: center; color: var(--text-dim); margin-top: 60px;">Hãy kết bạn với các thành viên CLB để bắt đầu nhắn tin!</div>`;
+        return;
+      }
+
+      if (!targetUserId) {
+        targetUserId = chatContacts[0].id;
+      }
+      activeChatOpponentId = targetUserId;
+
+      const activeOpponent = db.members.find(m => m.id === targetUserId);
+      if (activeOpponent) {
+        document.getElementById('activeChatUserName').textContent = `💬 ${activeOpponent.name}`;
+        document.getElementById('activeChatUserClass').textContent = `Lớp ${activeOpponent.class} • ${activeOpponent.category}`;
+      }
+
+      // Render danh bạ bên trái
+      let sideHtml = '';
+      chatContacts.forEach(contact => {
+        const isActive = contact.id === targetUserId;
+        const unread = getConversation(session.id, contact.id).filter(m => m.toId === session.id && !m.read).length;
+
+        sideHtml += `
+          <div class="chat-user-item ${isActive ? 'active' : ''}" onclick="renderHubChat('${contact.id}')">
+            <div class="friend-avatar" style="width: 34px; height: 34px; font-size: 14px;">🏸</div>
+            <div style="flex: 1; overflow: hidden;">
+              <div style="font-size: 0.85rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHtml(contact.name)}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Lớp ${escapeHtml(contact.class)}</div>
+            </div>
+            ${unread > 0 ? `<span class="badge-dot-unread"></span>` : ''}
+          </div>
+        `;
+      });
+      sidebarElem.innerHTML = sideHtml;
+
+      // Render tin nhắn trong cuộc trò chuyện
+      markConversationRead(targetUserId, session.id);
+      updateHubBadges();
+
+      const convo = getConversation(session.id, targetUserId);
+      if (convo.length === 0) {
+        messagesArea.innerHTML = `
+          <div style="text-align: center; color: var(--text-dim); margin-top: 50px;">
+            👋 Bắt đầu cuộc trò chuyện với <strong>${escapeHtml(activeOpponent?.name || 'bạn bè')}</strong> ngay bây giờ!
+          </div>
+        `;
+      } else {
+        let msgHtml = '';
+        convo.forEach(msg => {
+          const isMe = msg.fromId === session.id;
+          msgHtml += `
+            <div class="chat-bubble ${isMe ? 'sent' : 'received'}">
+              <div>${escapeHtml(msg.content)}</div>
+              <div class="chat-time">${msg.timestamp}</div>
+            </div>
+          `;
+        });
+        messagesArea.innerHTML = msgHtml;
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+      }
+    }
+
+    function handleSendChat(e) {
+      e.preventDefault();
+      const session = getSession();
+      if (!session || !activeChatOpponentId) return;
+
+      const input = document.getElementById('chatInputText');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const res = sendMessage(session.id, activeChatOpponentId, text);
+      if (res.success) {
+        input.value = '';
+        renderHubChat(activeChatOpponentId);
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    // Tiện ích modal
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('active');
+    }
+
+    function openRegisterModal() { openModal('registerModal'); }
+    function openLoginModal() { openModal('loginModal'); }
+    function openRulesModal() { openModal('rulesModal'); }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

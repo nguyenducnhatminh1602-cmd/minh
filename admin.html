@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Đoàn Thượng Badminton</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Firebase Cloud SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <!-- ADMIN TOP HEADER -->
+  <header class="admin-header-bar">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="index.html" class="logo-shuttlecock" style="width: 38px; height: 38px; font-size: 20px; text-decoration: none;">🏸</a>
+      <div>
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: #fff;">ĐOÀN THƯỢNG BADMINTON - ADMIN PANEL</h2>
+        <span style="font-size: 0.75rem; color: var(--bwf-gold);">HỆ THỐNG QUẢN TRỊ BẢNG XẾP HẠNG BWF</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;" id="adminHeaderUserArea">
+      <span style="font-size: 0.85rem; color: #fff;" id="adminCurrentName">👑 Quản Trị Viên</span>
+      <a href="index.html" class="btn btn-outline btn-sm">🏆 Xem Trang BXH</a>
+      <button class="btn btn-danger btn-sm" onclick="handleAdminLogout()">Đăng Xuất</button>
+    </div>
+  </header>
+
+  <!-- MAIN ADMIN CONTENT -->
+  <div style="max-width: 1240px; margin: 25px auto 40px; padding: 0 20px; flex: 1;" id="adminMainSection">
+
+    <!-- ADMIN TABS NAVIGATION -->
+    <div class="admin-nav-tabs">
+      <button class="admin-tab-btn active" onclick="switchTab('approvalsTab')">
+        📋 Duyệt Thành Viên Mới 
+        <span class="badge-count" id="pendingCountBadge">0</span>
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('membersTab')">
+        👥 Quản Lý Thành Viên
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('pointsTab')">
+        🏅 Quản Lý Điểm Số & Giải Đấu
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('newsAdminTab')">
+        📰 Đăng Bản Tin & Ảnh
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('settingsTab')">
+        💾 Sao Lưu & Dữ Liệu
+      </button>
+    </div>
+
+    <!-- =========================================================
+         TAB 1: PHÊ DUYỆT THÀNH VIÊN MỚI (APPROVALS)
+    ========================================================= -->
+    <div id="approvalsTab" class="tab-content">
+      <div class="admin-panel-card">
+        <div class="panel-title-row">
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 800;">📋 Danh Sách Thành Viên Đang Chờ Phê Duyệt</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+              Các thành viên tự đăng ký từ trang chủ sẽ xuất hiện tại đây. Sau khi Admin duyệt, thành viên sẽ chính thức được cấp quyền và đưa vào Bảng Xếp Hạng.
+            </p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="renderApprovals()">🔄 Tải Lại</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="bwf-table">
+            <thead>
+              <tr>
+                <th>HỌ VÀ TÊN</th>
+                <th>TÊN ĐĂNG NHẬP</th>
+                <th>LỚP</th>
+                <th>GIỚI TÍNH</th>
+                <th>NỘI DUNG ĐĂNG KÝ</th>
+                <th>NGÀY ĐĂNG KÝ</th>
+                <th style="text-align: center; width: 220px;">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody id="pendingTableBody">
+              <!-- Render bởi JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         TAB 2: QUẢN LÝ THÀNH VIÊN (MEMBERS MANAGEMENT)
+    ========================================================= -->
+    <div id="membersTab" class="tab-content" style="display: none;">
+      <div class="admin-panel-card">
+        <div class="panel-title-row">
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 800;">👥 Danh Sách Tất Cả Thành Viên Chính Thức</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+              Xem, chỉnh sửa thông tin, thêm thành viên mới trực tiếp hoặc xóa thành viên.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary btn-sm" onclick="openAddMemberModal()">➕ Thêm Thành Viên Trực Tiếp</button>
+          </div>
+        </div>
+
+        <!-- Bộ lọc nhanh thành viên -->
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+          <input type="text" id="adminMemberSearch" class="form-control" placeholder="Tìm theo tên, lớp hoặc username..." style="max-width: 300px;" oninput="renderMembersList()">
+          <select id="adminCategoryFilter" class="form-control" style="max-width: 200px;" onchange="renderMembersList()">
+            <option value="ALL">Tất cả nội dung</option>
+            <option value="Đơn Nam">Đơn Nam</option>
+            <option value="Đơn Nữ">Đơn Nữ</option>
+            <option value="Đôi Nam">Đôi Nam</option>
+            <option value="Đôi Nữ">Đôi Nữ</option>
+            <option value="Đôi Nam Nữ">Đôi Nam Nữ</option>
+          </select>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="bwf-table">
+            <thead>
+              <tr>
+                <th>HỌ VÀ TÊN</th>
+                <th>TÀI KHOẢN</th>
+                <th>LỚP</th>
+                <th>GIỚI TÍNH</th>
+                <th>NỘI DUNG</th>
+                <th style="text-align: right;">ĐIỂM BWF</th>
+                <th>MẬT KHẨU</th>
+                <th style="text-align: center; width: 180px;">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody id="membersTableBody">
+              <!-- Render bởi JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         TAB 3: QUẢN LÝ ĐIỂM SỐ & GIẢI ĐẤU (POINTS & TOURNAMENTS)
+    ========================================================= -->
+    <div id="pointsTab" class="tab-content" style="display: none;">
+      <div class="admin-panel-card">
+        <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">🏅 Cộng / Trừ Điểm BWF Cho Thành Viên</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+          Cập nhật điểm theo từng giải đấu hoặc trận giao lưu. Hệ thống sẽ tự động tính toán lại thứ hạng ngay lập tức.
+        </p>
+
+        <form id="pointsAdjustForm" onsubmit="handlePointsSubmit(event)" style="background: var(--bg-surface); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 30px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Chọn Vận Động Viên (*)</label>
+              <select id="pointMemberSelect" class="form-control" required>
+                <option value="">-- Chọn thành viên nhận điểm --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Loại Thao Tác (*)</label>
+              <select id="pointTypeSelect" class="form-control" required>
+                <option value="PLUS">➕ Cộng Điểm (+)</option>
+                <option value="MINUS">➖ Trừ Điểm (-)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Các nút chọn nhanh điểm BWF -->
+          <div style="margin-bottom: 15px;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">MỨC ĐIỂM NHANH THEO QUY CHUẨN:</label>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="setQuickPoints(1000, 'Vô địch Giải Cầu Lông (Huy chương Vàng)')">🥇 Vô địch (+1000)</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setQuickPoints(800, 'Á quân Giải Cầu Lông (Huy chương Bạc)')">🥈 Á quân (+800)</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setQuickPoints(650, 'Hạng Ba Giải Cầu Lông (Huy chương Đồng)')">🥉 Hạng Ba (+650)</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setQuickPoints(450, 'Vào vòng Tứ kết giải đấu')">🏸 Tứ kết (+450)</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setQuickPoints(200, 'Thắng trận vòng bảng giải đấu')">⭐ Thắng vòng bảng (+200)</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="setQuickPoints(100, 'Thắng trận giao lưu / Thách đấu CLB')">⚔️ Thắng giao lưu (+100)</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Số Điểm Thay Đổi (*)</label>
+              <input type="number" id="pointAmount" class="form-control" placeholder="Ví dụ: 1000, 500, 100..." min="1" required>
+            </div>
+
+            <div class="form-group">
+              <label>Tên Giải Đấu / Sự Kiện</label>
+              <input type="text" id="pointTournament" class="form-control" placeholder="Ví dụ: Giải Cầu Lông Đoàn Thượng Mùa Xuân 2026">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Lý Do / Chi Tiết Điểm (*)</label>
+            <input type="text" id="pointReason" class="form-control" placeholder="Ví dụ: Đạt giải Nhất Khối 12, Thắng 2-0 trận chung kết..." required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="font-weight: 700; padding: 12px 24px;">
+            ⚡ Xác Nhận & Cập Nhật Bảng Xếp Hạng
+          </button>
+        </form>
+
+        <h4 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 12px;">📜 Nhật Ký Điểm Đã Cộng Gần Đây</h4>
+        <div class="table-wrapper">
+          <table class="bwf-table">
+            <thead>
+              <tr>
+                <th>VẬN ĐỘNG VIÊN</th>
+                <th>SỰ KIỆN / LÝ DO</th>
+                <th style="text-align: right;">ĐIỂM THAY ĐỔI</th>
+                <th>NGÀY CẬP NHẬT</th>
+                <th>ADMIN DUYỆT</th>
+              </tr>
+            </thead>
+            <tbody id="recentPointsLogBody">
+              <!-- Render bởi JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         TAB 4: ĐĂNG BẢN TIN & QUẢN LÝ HÌNH ẢNH (NEWS & MEDIA)
+    ========================================================= -->
+    <div id="newsAdminTab" class="tab-content" style="display: none;">
+      <div class="admin-panel-card">
+        <div class="panel-title-row">
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 800;">📰 Quản Lý & Đăng Bản Tin Cầu Lông</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+              Admin có quyền đăng bài viết, hình ảnh giải đấu, thông báo lịch tập và hướng dẫn kỹ thuật lên trang chủ.
+            </p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openCreateNewsModal()">
+            ➕ Đăng Bản Tin Mới & Tải Ảnh
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="bwf-table">
+            <thead>
+              <tr>
+                <th style="width: 90px;">HÌNH ẢNH</th>
+                <th>TIÊU ĐỀ BẢN TIN</th>
+                <th>DANH MỤC</th>
+                <th>NGƯỜI ĐĂNG</th>
+                <th>NGÀY ĐĂNG</th>
+                <th style="text-align: center; width: 150px;">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody id="newsAdminTableBody">
+              <!-- Render bởi JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         TAB 5: CÀI ĐẶT & DỮ LIỆU (BACKUP & RESTORE)
+    ========================================================= -->
+    <div id="settingsTab" class="tab-content" style="display: none;">
+      <div class="admin-panel-card">
+        <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">💾 Sao Lưu & Quản Trị Hệ Thống</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px;">
+          Tải về dữ liệu dự phòng hoặc khôi phục để bảo đảm không bị mất dữ liệu bảng xếp hạng.
+        </p>
+
+        <!-- Khối Cloud Sync Online Toàn Trường -->
+        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 36, 51, 0.8) 100%); border: 1px solid rgba(59, 130, 246, 0.4); padding: 22px; border-radius: var(--radius-md); margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+            <h4 style="color: #60A5FA; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+              ☁️ ĐỒNG BỘ DỮ LIỆU ONLINE (CHO TOÀN TRƯỜNG CÙNG XEM)
+            </h4>
+            <span id="cloudConnectionStatus" style="font-size: 0.8rem; font-weight: 700; color: #10B981; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: var(--radius-full);">
+              🟢 Sẵn sàng đồng bộ
+            </span>
+          </div>
+
+          <p style="font-size: 0.88rem; color: var(--text-main); margin-bottom: 16px; line-height: 1.5;">
+            Khi Admin thêm/xóa thành viên, cộng điểm hoặc đăng bản tin & hình ảnh, tính năng này đảm bảo <strong>tất cả học sinh, bạn bè và thành viên CLB khi truy cập web trên điện thoại hay máy tính đều xem được dữ liệu mới nhất ngay lập tức</strong>.
+          </p>
+
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="handleManualCloudPush()">
+              🚀 Đẩy Dữ Liệu Hiện Tại Lên Cloud Cho Mọi Người Cùng Xem
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="handleManualCloudPull()">
+              📥 Cập Nhật Dữ Liệu Mới Nhất Từ Cloud
+            </button>
+          </div>
+        </div>
+
+        <!-- Khối Admin cố định -->
+        <div style="background: var(--bg-surface); padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 24px;">
+          <h4 style="color: var(--bwf-gold); margin-bottom: 10px; font-size: 1rem;">👑 Danh Sách 2 Tài Khoản Admin Cố Định</h4>
+          <ul style="padding-left: 20px; font-size: 0.9rem; color: var(--text-main); line-height: 1.8;">
+            <li><strong>Admin 1:</strong> <code>nguyenducnhatminh1602</code> (Họ tên: Nguyễn Đức Nhật Minh)</li>
+            <li><strong>Admin 2:</strong> <code>nguyenduchieu</code> (Họ tên: Nguyễn Đức Hiếu)</li>
+          </ul>
+        </div>
+
+        <!-- Khối Backup & Restore -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px;">
+          <div style="background: var(--bg-surface); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="font-size: 1rem; margin-bottom: 8px;">📥 Xuất File Dữ Liệu (Backup)</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+              Tải toàn bộ danh sách thành viên, điểm số và lịch sử về máy tính dưới dạng file JSON.
+            </p>
+            <button class="btn btn-gold btn-sm" onclick="exportDatabaseJSON()">
+              📥 Tải File Sao Lưu JSON
+            </button>
+          </div>
+
+          <div style="background: var(--bg-surface); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <h4 style="font-size: 1rem; margin-bottom: 8px;">📤 Phục Hồi Dữ Liệu (Restore)</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+              Chọn file JSON sao lưu từ máy tính để nạp lại dữ liệu vào hệ thống.
+            </p>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFileInput').click()">
+              📤 Chọn File JSON Để Phục Hồi
+            </button>
+          </div>
+        </div>
+
+        <!-- Khối Đặt Lại -->
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); padding: 18px; border-radius: var(--radius-md);">
+          <h4 style="color: var(--danger); font-size: 1rem; margin-bottom: 6px;">⚠️ Khôi Phục Dữ Liệu Mẫu Ban Đầu</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+            Nếu muốn nạp lại danh sách thành viên mẫu của trường THPT Đoàn Thượng, bạn có thể bấm nút bên dưới.
+          </p>
+          <button class="btn btn-danger btn-sm" onclick="handleResetSampleData()">
+            🔄 Khôi Phục Dữ Liệu Mẫu
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =========================================================
+       MODAL: PHÊ DUYỆT THÀNH VIÊN KÈM CỘNG ĐIỂM KHỞI TẠO
+  ========================================================= -->
+  <div class="modal-backdrop" id="approveMemberModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>✓ Phê Duyệt Thành Viên</h3>
+        <button class="btn-close-modal" onclick="closeModal('approveMemberModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; margin-bottom: 15px;">
+          Xác nhận phê duyệt cho VĐV: <strong id="approveMemberName" style="color: var(--bwf-gold);">-</strong>
+        </p>
+
+        <form id="approveForm" onsubmit="handleApproveSubmit(event)">
+          <input type="hidden" id="approveMemberId">
+          
+          <div class="form-group">
+            <label>Điểm Khởi Tạo Ban Đầu</label>
+            <input type="number" id="approveInitialPoints" class="form-control" value="100" min="0">
+            <small style="color: var(--text-dim); font-size: 0.75rem; margin-top: 4px; display: block;">Mặc định 100 điểm thưởng khi gia nhập CLB.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Lý Do Phê Duyệt</label>
+            <input type="text" id="approveReason" class="form-control" value="Gia nhập CLB Cầu Lông Đoàn Thượng">
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn btn-success" style="flex: 1;">✓ Chấp Nhận & Đưa Vào BXH</button>
+            <button type="button" class="btn btn-outline" onclick="closeModal('approveMemberModal')">Hủy</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL: THÊM THÀNH VIÊN TRỰC TIẾP TỪ ADMIN
+  ========================================================= -->
+  <div class="modal-backdrop" id="addMemberModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>➕ Thêm Vận Động Viên Trực Tiếp</h3>
+        <button class="btn-close-modal" onclick="closeModal('addMemberModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addMemberForm" onsubmit="handleAddMemberSubmit(event)">
+          <div class="form-group">
+            <label>Họ và Tên (*)</label>
+            <input type="text" id="addName" class="form-control" placeholder="Ví dụ: Trần Văn Nam" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Lớp (*)</label>
+              <input type="text" id="addClass" class="form-control" placeholder="12A1, 11A2..." required>
+            </div>
+            <div class="form-group">
+              <label>Giới Tính (*)</label>
+              <select id="addGender" class="form-control" required>
+                <option value="Nam">Nam</option>
+                <option value="Nữ">Nữ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nội Dung Thi Đấu (*)</label>
+            <select id="addCategory" class="form-control" required>
+              <option value="Đơn Nam">🏸 Đơn Nam (Men's Singles)</option>
+              <option value="Đơn Nữ">🏸 Đơn Nữ (Women's Singles)</option>
+              <option value="Đôi Nam">🏸 Đôi Nam (Men's Doubles)</option>
+              <option value="Đôi Nữ">🏸 Đôi Nữ (Women's Doubles)</option>
+              <option value="Đôi Nam Nữ">🏸 Đôi Nam Nữ (Mixed Doubles)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tên Đăng Nhập (*)</label>
+              <input type="text" id="addUsername" class="form-control" placeholder="username" required>
+            </div>
+            <div class="form-group">
+              <label>Mật Khẩu (*)</label>
+              <input type="text" id="addPassword" class="form-control" value="123456" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Điểm Ban Đầu</label>
+            <input type="number" id="addPoints" class="form-control" value="500" min="0">
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            ➕ Tạo Thành Viên & Đưa Vào BXH
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL: ĐĂNG / CHỈNH SỬA BẢN TIN & HÌNH ẢNH
+  ========================================================= -->
+  <div class="modal-backdrop" id="newsModal">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="newsModalHeading">📰 Đăng Bản Tin Cầu Lông Mới</h3>
+        <button class="btn-close-modal" onclick="closeModal('newsModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="newsForm" onsubmit="handleNewsFormSubmit(event)">
+          <input type="hidden" id="newsFormId">
+
+          <div class="form-group">
+            <label>Tiêu Đề Bản Tin (*)</label>
+            <input type="text" id="newsFormTitle" class="form-control" placeholder="Ví dụ: Khởi tranh Giải Cầu Lông Đoàn Thượng Mùa Xuân 2026" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Danh Mục (*)</label>
+              <select id="newsFormCategory" class="form-control" required>
+                <option value="Giải Đấu">🏆 Tin Giải Đấu</option>
+                <option value="Thông Báo">📢 Thông Báo CLB</option>
+                <option value="Kỹ Thuật">🏸 Hướng Dẫn Kỹ Thuật</option>
+                <option value="Kết Quả">⭐ Kết Quả Trận Đấu</option>
+                <option value="Tin Tức">📰 Tin Tức Chung</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tác Giả (Admin)</label>
+              <input type="text" id="newsFormAuthor" class="form-control" readonly style="opacity: 0.8; cursor: not-allowed;">
+            </div>
+          </div>
+
+          <!-- Khu vực Tải Hình Ảnh -->
+          <div class="form-group">
+            <label>Hình Ảnh Bản Tin (*)</label>
+            
+            <div class="image-upload-box" onclick="document.getElementById('newsImageFileInput').click()">
+              <input type="file" id="newsImageFileInput" accept="image/*" style="display: none;" onchange="handleImageFileSelect(event)">
+              <div id="imageUploadPrompt">
+                <div style="font-size: 28px; margin-bottom: 6px;">📷</div>
+                <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">Nhấp vào đây để tải ảnh từ máy tính / điện thoại</div>
+                <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">Hỗ trợ JPG, PNG, WebP (Tự động nén tối ưu)</div>
+              </div>
+            </div>
+
+            <!-- Preview hình ảnh -->
+            <div class="image-preview-container" id="newsImagePreviewContainer">
+              <img id="newsImagePreview" src="" alt="Xem trước hình ảnh">
+            </div>
+
+            <!-- Hoặc nhập link ảnh trực tiếp -->
+            <div style="margin-top: 10px;">
+              <input type="text" id="newsFormImageUrl" class="form-control" placeholder="Hoặc dán đường link (URL) ảnh tại đây nếu có..." oninput="handleImageUrlInput(event)">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tóm Tắt Ngắn (*)</label>
+            <textarea id="newsFormSummary" class="form-control" rows="2" placeholder="Tóm tắt 1-2 câu hiển thị ngoài trang chủ..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Nội Dung Chi Tiết (*)</label>
+            <textarea id="newsFormContent" class="form-control" rows="5" placeholder="Nhập đầy đủ nội dung bài viết, kết quả, thể lệ thi đấu..." required></textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+              🚀 Đăng Lên Trang Web
+            </button>
+            <button type="button" class="btn btn-outline" onclick="closeModal('newsModal')">Hủy</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT ADMIN LOGIC -->
+  <script src="app.js"></script>
+  <script>
+    // Kiểm tra quyền Admin khi tải trang
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAdminAccess();
+      renderAllAdminTabs();
+
+      // Lắng nghe sự kiện đồng bộ
+      if (syncChannel) {
+        syncChannel.onmessage = (msg) => {
+          if (msg.data && msg.data.type === 'DATA_UPDATED') {
+            renderAllAdminTabs();
+          }
+        };
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === STORAGE_KEY) {
+          renderAllAdminTabs();
+        }
+      });
+    });
+
+    function checkAdminAccess() {
+      const sess = getSession();
+      if (!sess || !sess.isAdmin) {
+        alert('Bạn cần đăng nhập tài khoản Quản trị viên (Admin) để truy cập trang này!');
+        window.location.href = 'index.html';
+        return;
+      }
+      document.getElementById('adminCurrentName').textContent = `👑 Admin: ${sess.name}`;
+    }
+
+    function handleAdminLogout() {
+      clearSession();
+      window.location.href = 'index.html';
+    }
+
+    // Chuyển Tab Admin an toàn
+    function switchTab(tabId, evt) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
+
+      const target = document.getElementById(tabId);
+      if (target) target.style.display = 'block';
+
+      const btn = evt ? evt.currentTarget : (typeof event !== 'undefined' && event?.currentTarget) || document.querySelector(`[onclick*="${tabId}"]`);
+      if (btn && btn.classList) btn.classList.add('active');
+    }
+
+    // Render toàn bộ các tab
+    function renderAllAdminTabs() {
+      renderApprovals();
+      renderMembersList();
+      populatePointsDropdown();
+      renderRecentPointsLog();
+      renderNewsAdminList();
+    }
+
+    // 1. Render Tab Phê Duyệt
+    function renderApprovals() {
+      const db = getDB();
+      const pending = db.members.filter(m => m.status === 'pending');
+      const badge = document.getElementById('pendingCountBadge');
+      if (badge) badge.textContent = pending.length;
+
+      const tbody = document.getElementById('pendingTableBody');
+      if (!tbody) return;
+
+      if (pending.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-dim); padding: 30px;">
+              ✅ Không có thành viên nào đang chờ phê duyệt.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      let html = '';
+      pending.forEach(m => {
+        html += `
+          <tr>
+            <td style="font-weight: 700; color: #fff;">${escapeHtml(m.name)}</td>
+            <td><code>@${escapeHtml(m.username)}</code></td>
+            <td><span class="class-badge">${escapeHtml(m.class)}</span></td>
+            <td>${m.gender}</td>
+            <td><span class="category-pill">${m.category}</span></td>
+            <td style="color: var(--text-dim); font-size: 0.85rem;">${m.joinDate || 'Hôm nay'}</td>
+            <td style="text-align: center;">
+              <button class="btn btn-success btn-sm" onclick="openApproveModal('${m.id}', '${escapeHtml(m.name)}')" style="margin-right: 6px;">
+                ✓ Duyệt
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="handleRejectMember('${m.id}')">
+                ✗ Từ Chối
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function openApproveModal(id, name) {
+      document.getElementById('approveMemberId').value = id;
+      document.getElementById('approveMemberName').textContent = name;
+      openModal('approveMemberModal');
+    }
+
+    function handleApproveSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('approveMemberId').value;
+      const pts = document.getElementById('approveInitialPoints').value;
+      const reason = document.getElementById('approveReason').value;
+
+      const res = approveMember(id, pts, reason);
+      if (res.success) {
+        showToast(res.message, 'success');
+        closeModal('approveMemberModal');
+        renderAllAdminTabs();
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    function handleRejectMember(id) {
+      if (confirm('Bạn có chắc chắn muốn từ chối và xóa đơn đăng ký này?')) {
+        const res = deleteMember(id);
+        showToast(res.message, 'info');
+        renderAllAdminTabs();
+      }
+    }
+
+    // 2. Render Tab Danh Sách Thành Viên
+    function renderMembersList() {
+      const db = getDB();
+      const search = (document.getElementById('adminMemberSearch')?.value || '').toLowerCase().trim();
+      const catFilter = document.getElementById('adminCategoryFilter')?.value || 'ALL';
+
+      let list = db.members.filter(m => m.status === 'active');
+
+      if (catFilter !== 'ALL') {
+        list = list.filter(m => (m.categories && m.categories.includes(catFilter)) || m.category === catFilter);
+      }
+      if (search !== '') {
+        list = list.filter(m => 
+          m.name.toLowerCase().includes(search) || 
+          m.username.toLowerCase().includes(search) || 
+          m.class.toLowerCase().includes(search)
+        );
+      }
+
+      list.sort((a, b) => b.points - a.points);
+
+      const tbody = document.getElementById('membersTableBody');
+      if (!tbody) return;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 30px;">Không có thành viên nào.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      list.forEach(m => {
+        const cats = m.categories && Array.isArray(m.categories) ? m.categories : [m.category || 'Đơn Nam'];
+        let catsHtml = '<div class="category-badges-group">';
+        cats.forEach(c => {
+          catsHtml += `<span class="category-pill">${escapeHtml(c)}</span>`;
+        });
+        catsHtml += '</div>';
+
+        html += `
+          <tr>
+            <td style="font-weight: 700; color: #fff;">${escapeHtml(m.name)}</td>
+            <td><code>@${escapeHtml(m.username)}</code></td>
+            <td><span class="class-badge">${escapeHtml(m.class)}</span></td>
+            <td>${m.gender}</td>
+            <td>${catsHtml}</td>
+            <td style="text-align: right; font-weight: 800; color: var(--bwf-gold); font-size: 1.05rem;">
+              ${m.points.toLocaleString()}
+            </td>
+            <td>
+              <span style="font-size: 0.8rem; color: var(--text-dim); background: var(--bg-surface); padding: 2px 6px; border-radius: 4px;">
+                ${escapeHtml(m.password)}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <button class="btn btn-outline btn-sm" onclick="openEditModal('${m.id}')" title="Sửa" style="margin-right: 4px;">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="handleDeleteMember('${m.id}')" title="Xóa">🗑️</button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function openAddMemberModal() { openModal('addMemberModal'); }
+
+    function handleAddMemberSubmit(e) {
+      e.preventDefault();
+      const res = addMemberDirectly({
+        name: document.getElementById('addName').value,
+        class: document.getElementById('addClass').value,
+        gender: document.getElementById('addGender').value,
+        category: document.getElementById('addCategory').value,
+        username: document.getElementById('addUsername').value,
+        password: document.getElementById('addPassword').value,
+        points: document.getElementById('addPoints').value
+      });
+
+      if (res.success) {
+        showToast(res.message, 'success');
+        closeModal('addMemberModal');
+        document.getElementById('addMemberForm').reset();
+        renderAllAdminTabs();
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    function openEditModal(id) {
+      const db = getDB();
+      const m = db.members.find(x => x.id === id);
+      if (!m) return;
+
+      document.getElementById('editMemberId').value = m.id;
+      document.getElementById('editName').value = m.name;
+      document.getElementById('editClass').value = m.class;
+      document.getElementById('editGender').value = m.gender;
+      document.getElementById('editCategory').value = m.category;
+      document.getElementById('editPassword').value = '';
+
+      openModal('editMemberModal');
+    }
+
+    function handleEditMemberSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('editMemberId').value;
+      const res = updateMemberInfo(id, {
+        name: document.getElementById('editName').value,
+        class: document.getElementById('editClass').value,
+        gender: document.getElementById('editGender').value,
+        category: document.getElementById('editCategory').value,
+        password: document.getElementById('editPassword').value
+      });
+
+      if (res.success) {
+        showToast(res.message, 'success');
+        closeModal('editMemberModal');
+        renderAllAdminTabs();
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    function handleDeleteMember(id) {
+      if (confirm('Bạn có chắc chắn muốn xóa thành viên này khỏi hệ thống? Dữ liệu điểm sẽ bị xóa hoàn toàn.')) {
+        const res = deleteMember(id);
+        showToast(res.message, 'info');
+        renderAllAdminTabs();
+      }
+    }
+
+    // 3. Tab Quản Lý Điểm Số
+    function populatePointsDropdown() {
+      const db = getDB();
+      const activeList = db.members.filter(m => m.status === 'active');
+      activeList.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+
+      const select = document.getElementById('pointMemberSelect');
+      if (!select) return;
+
+      let html = '<option value="">-- Chọn Vận Động Viên --</option>';
+      activeList.forEach(m => {
+        html += `<option value="${m.id}">${escapeHtml(m.name)} - Lớp ${escapeHtml(m.class)} (${m.points} điểm)</option>`;
+      });
+      select.innerHTML = html;
+    }
+
+    function setQuickPoints(amount, reason) {
+      document.getElementById('pointAmount').value = amount;
+      document.getElementById('pointReason').value = reason;
+      document.getElementById('pointTypeSelect').value = 'PLUS';
+    }
+
+    function handlePointsSubmit(e) {
+      e.preventDefault();
+      const memberId = document.getElementById('pointMemberSelect').value;
+      const type = document.getElementById('pointTypeSelect').value;
+      const amount = Number(document.getElementById('pointAmount').value);
+      const tournament = document.getElementById('pointTournament').value;
+      const reason = document.getElementById('pointReason').value;
+
+      if (!memberId) {
+        showToast('Vui lòng chọn Vận Động Viên nhận điểm!', 'warning');
+        return;
+      }
+
+      const pointsDiff = type === 'PLUS' ? amount : -amount;
+      const res = adjustMemberPoints(memberId, pointsDiff, reason, tournament);
+
+      if (res.success) {
+        showToast(res.message, 'success');
+        document.getElementById('pointAmount').value = '';
+        document.getElementById('pointReason').value = '';
+        renderAllAdminTabs();
+      } else {
+        showToast(res.message, 'danger');
+      }
+    }
+
+    function renderRecentPointsLog() {
+      const db = getDB();
+      const activeMembers = db.members.filter(m => m.status === 'active');
+      let allLogs = [];
+
+      activeMembers.forEach(m => {
+        if (m.history && Array.isArray(m.history)) {
+          m.history.forEach(h => {
+            allLogs.push({
+              memberName: m.name,
+              memberClass: m.class,
+              ...h
+            });
+          });
+        }
+      });
+
+      // Sắp xếp lịch sử mới nhất lên đầu
+      allLogs.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+      allLogs = allLogs.slice(0, 15); // Lấy 15 giao dịch gần nhất
+
+      const tbody = document.getElementById('recentPointsLogBody');
+      if (!tbody) return;
+
+      if (allLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 20px;">Chưa có giao dịch điểm nào.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      allLogs.forEach(log => {
+        const isPlus = (log.points || 0) >= 0;
+        html += `
+          <tr>
+            <td style="font-weight: 700; color: #fff;">${escapeHtml(log.memberName)} <span style="font-size: 0.75rem; color: var(--text-dim);">(${escapeHtml(log.memberClass)})</span></td>
+            <td>${escapeHtml(log.reason)}</td>
+            <td style="text-align: right; font-weight: 800; font-size: 1.05rem;" class="${isPlus ? 'points-plus' : 'points-minus'}">
+              ${isPlus ? '+' : ''}${log.points.toLocaleString()}
+            </td>
+            <td style="color: var(--text-dim); font-size: 0.85rem;">📅 ${log.date}</td>
+            <td style="color: var(--bwf-gold); font-size: 0.85rem;">👑 ${escapeHtml(log.by || 'Admin')}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    // 4. Tab Quản Lý Bản Tin & Hình Ảnh
+    let currentUploadedImageData = '';
+
+    function renderNewsAdminList() {
+      const newsList = getNewsList();
+      const tbody = document.getElementById('newsAdminTableBody');
+      if (!tbody) return;
+
+      if (!newsList || newsList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 30px;">Chưa có bản tin nào. Hãy bấm nút Đăng Bản Tin để đăng bài mới!</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      newsList.forEach(item => {
+        html += `
+          <tr>
+            <td>
+              <img src="${escapeHtml(item.image)}" alt="Thumbnail" style="width: 70px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);" onerror="this.src='https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80'">
+            </td>
+            <td style="font-weight: 700; color: #fff;">
+              ${escapeHtml(item.title)}
+              <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: normal; margin-top: 2px;">
+                ${escapeHtml(item.summary.substring(0, 75))}...
+              </div>
+            </td>
+            <td><span class="category-pill">${escapeHtml(item.category || 'Tin Tức')}</span></td>
+            <td style="color: var(--bwf-gold); font-size: 0.85rem;">👑 ${escapeHtml(item.author || 'Admin')}</td>
+            <td style="color: var(--text-dim); font-size: 0.85rem;">📅 ${item.date || 'Gần đây'}</td>
+            <td style="text-align: center;">
+              <button class="btn btn-outline btn-sm" onclick="openEditNewsModal('${item.id}')" title="Sửa bài viết" style="margin-right: 4px;">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="handleDeleteNews('${item.id}')" title="Xóa bài viết">🗑️</button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function openCreateNewsModal() {
+      const sess = getSession();
+      document.getElementById('newsFormId').value = '';
+      document.getElementById('newsModalHeading').textContent = '📰 Đăng Bản Tin Cầu Lông Mới';
+      document.getElementById('newsFormTitle').value = '';
+      document.getElementById('newsFormCategory').value = 'Giải Đấu';
+      document.getElementById('newsFormAuthor').value = sess?.name || 'Ban Quản Trị';
+      document.getElementById('newsFormImageUrl').value = '';
+      document.getElementById('newsFormSummary').value = '';
+      document.getElementById('newsFormContent').value = '';
+
+      currentUploadedImageData = '';
+      document.getElementById('newsImagePreviewContainer').style.display = 'none';
+      document.getElementById('newsImagePreview').src = '';
+      document.getElementById('imageUploadPrompt').style.display = 'block';
+
+      openModal('newsModal');
+    }
+
+    function openEditNewsModal(id) {
+      const newsList = getNewsList();
+      const item = newsList.find(n => n.id === id);
+      if (!item) return;
+
+      document.getElementById('newsFormId').value = item.id;
+      document.getElementById('newsModalHeading').textContent = '✏️ Chỉnh Sửa Bản Tin';
+      document.getElementById('newsFormTitle').value = item.title;
+      document.getElementById('newsFormCategory').value = item.category || 'Tin Tức';
+      document.getElementById('newsFormAuthor').value = item.author || 'Admin';
+      document.getElementById('newsFormImageUrl').value = item.image.startsWith('data:') ? '' : item.image;
+      document.getElementById('newsFormSummary').value = item.summary;
+      document.getElementById('newsFormContent').value = item.content;
+
+      currentUploadedImageData = item.image;
+      document.getElementById('newsImagePreview').src = item.image;
+      document.getElementById('newsImagePreviewContainer').style.display = 'block';
+      document.getElementById('imageUploadPrompt').style.display = 'none';
+
+      openModal('newsModal');
+    }
+
+    async function handleImageFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        showToast('Đang xử lý & nén ảnh...', 'info');
+        const compressedBase64 = await compressImageFile(file, 1000, 700, 0.8);
+        currentUploadedImageData = compressedBase64;
+        
+        document.getElementById('newsImagePreview').src = compressedBase64;
+        document.getElementById('newsImagePreviewContainer').style.display = 'block';
+        document.getElementById('imageUploadPrompt').style.display = 'none';
+        document.getElementById('newsFormImageUrl').value = '';
+        showToast('Đã tải và xử lý hình ảnh thành công!', 'success');
+      } catch (err) {
+        showToast(err.message || 'Lỗi khi xử lý hình ảnh!', 'danger');
+      }
+    }
+
+    function handleImageUrlInput(e) {
+      const url = e.target.value.trim();
+      if (url) {
+        currentUploadedImageData = url;
+        document.getElementById('newsImagePreview').src = url;
+        document.getElementById('newsImagePreviewContainer').style.display = 'block';
+        document.getElementById('imageUploadPrompt').style.display = 'none';
+      }
+    }
+
+    function handleNewsFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('newsFormId').value;
+      const title = document.getElementById('newsFormTitle').value;
+      const category = document.getElementById('newsFormCategory').value;
+      const urlInput = document.getElementById('newsFormImageUrl').value.trim();
+      const summary = document.getElementById('newsFormSummary').value;
+      const content = document.getElementById('newsFormContent').value;
+
+      const finalImage = currentUploadedImageData || urlInput || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80';
+
+      if (id) {
+        // Chỉnh sửa bài viết
+        const res = updateNewsItem(id, {
+          title, category, image: finalImage, summary, content
+        });
+        if (res.success) {
+          showToast(res.message, 'success');
+          closeModal('newsModal');
+          renderAllAdminTabs();
+        } else {
+          showToast(res.message, 'danger');
+        }
+      } else {
+        // Đăng bài mới
+        const res = addNewsItem({
+          title, category, image: finalImage, summary, content
+        });
+        if (res.success) {
+          showToast(res.message, 'success');
+          closeModal('newsModal');
+          renderAllAdminTabs();
+        } else {
+          showToast(res.message, 'danger');
+        }
+      }
+    }
+
+    function handleDeleteNews(id) {
+      if (confirm('Bạn có chắc chắn muốn xóa bản tin này khỏi trang web?')) {
+        const res = deleteNewsItem(id);
+        showToast(res.message, 'info');
+        renderAllAdminTabs();
+      }
+    }
+
+    // 5. Tab Cài Đặt & Backup
+    function handleManualCloudPush() {
+      const db = getDB();
+      saveDB(db);
+      showToast('Đã đẩy toàn bộ dữ liệu & bản tin mới nhất lên Cloud cho mọi người cùng xem!', 'success');
+    }
+
+    function handleManualCloudPull() {
+      if (firebaseDbRef) {
+        showToast('Đang tải dữ liệu mới nhất từ Cloud...', 'info');
+        firebaseDbRef.once('value').then(snapshot => {
+          const cloudData = snapshot.val();
+          if (cloudData && cloudData.members) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+            renderAllAdminTabs();
+            showToast('Đã cập nhật dữ liệu mới nhất từ Cloud thành công!', 'success');
+          } else {
+            showToast('Dữ liệu trên Cloud trống hoặc đang được khởi tạo.', 'info');
+          }
+        }).catch(err => {
+          showToast('Lỗi khi tải từ Cloud: ' + err.message, 'danger');
+        });
+      } else {
+        renderAllAdminTabs();
+        showToast('Đã làm mới dữ liệu hệ thống!', 'success');
+      }
+    }
+
+    function handleFileImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target.result;
+        const res = importDatabaseJSON(content);
+        if (res.success) {
+          showToast(res.message, 'success');
+          renderAllAdminTabs();
+        } else {
+          showToast(res.message, 'danger');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleResetSampleData() {
+      if (confirm('Khôi phục dữ liệu mẫu ban đầu? Toàn bộ danh sách VĐV và điểm số hiện tại sẽ trở về mặc định.')) {
+        const res = resetDatabase();
+        showToast(res.message, 'success');
+        renderAllAdminTabs();
+      }
+    }
+
+    // Tiện ích modal
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('active');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
